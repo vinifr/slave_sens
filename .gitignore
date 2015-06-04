@@ -10,6 +10,10 @@
 *.htm
 *.lnp
 *~
+*.mk
+*.pp
+*.map
+*.opt
 
 # Libraries
 #*.lib
@@ -24,6 +28,7 @@
 # Executables
 *.exe
 *.out
+*.obj
 *.app
 *.elf
 *.hex

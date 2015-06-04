@@ -61,15 +61,34 @@
 //
 //*****************************************************************************
 
-#define V_HIGH			3	// 3 Volts
-#define V_REF			(4096*V_HIGH) / 3.3
-#define NIVEL_1V		3723	// Valor referente a 3V depois da conversao
+#define I2C_SLAVE_ADDR		0x30
+#define V_HIGH				3	// 3 Volts
+#define V_REF				(4096*V_HIGH) / 3.3
+#define NIVEL_1V			3723	// Valor referente a 3V depois da conversao
 
-#define INTERT_1MS		5
-#define INTERT_2MS		10
+#define INTERT_1MS			5
+#define INTERT_2MS			10
 
-#define MAX_SENSORES	96
-#define ID_FIM			MAX_SENSORES/8
+#define MAX_SENSORES		96
+#define ID_FIM				MAX_SENSORES/8
+
+#define A4_LOW			GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_4, 0)
+#define A3_LOW 			GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_5, 0)
+#define A2_LOW 			GPIOPinWrite(GPIO_PORTB_BASE, GPIO_PIN_4, 0)
+#define A1_LOW 			GPIOPinWrite(GPIO_PORTA_BASE, GPIO_PIN_5, 0)
+#define A0_LOW 			GPIOPinWrite(GPIO_PORTA_BASE, GPIO_PIN_6, 0)
+#define EN_LOW 			GPIOPinWrite(GPIO_PORTB_BASE, GPIO_PIN_5, 0)
+#define CS_LOW 			GPIOPinWrite(GPIO_PORTB_BASE, GPIO_PIN_1, 0)
+#define WR_LOW 			GPIOPinWrite(GPIO_PORTB_BASE, GPIO_PIN_0, 0)
+
+#define A4_HIGH			GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_4, 1)
+#define A3_HIGH			GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_5, 1)
+#define A2_HIGH			GPIOPinWrite(GPIO_PORTB_BASE, GPIO_PIN_4, 1)
+#define A1_HIGH			GPIOPinWrite(GPIO_PORTA_BASE, GPIO_PIN_5, 1)
+#define A0_HIGH			GPIOPinWrite(GPIO_PORTA_BASE, GPIO_PIN_6, 1)
+#define EN_HIGH			GPIOPinWrite(GPIO_PORTB_BASE, GPIO_PIN_5, 1)
+#define CS_HIGH			GPIOPinWrite(GPIO_PORTB_BASE, GPIO_PIN_1, 1)
+#define WR_HIGH			GPIOPinWrite(GPIO_PORTB_BASE, GPIO_PIN_0, 1)
 //****************************************************************************
 //
 // System clock rate in Hz.
@@ -184,14 +203,6 @@ void Timer1IntHandler(void)
     //
     GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_1, g_ui32Flags);
     //GPIOPinWrite(GPIO_PORTN_BASE, GPIO_PIN_2, g_ui32Flags);
-    //
-    // Update the interrupt status.
-    // 
-    /*ROM_IntMasterDisable();
-    cOne = HWREGBITW(&g_ui32Flags, 0) ? '1' : '0';
-    cTwo = HWREGBITW(&g_ui32Flags, 1) ? '1' : '0';
-    UARTprintf("\rT1: %c  T2: %c", cOne, cTwo);
-    ROM_IntMasterEnable();*/
 }
 
 void ADCISRHandler(void)
@@ -211,22 +222,21 @@ void ADCConfig(void)
 	SysCtlClockSet(
 	SYSCTL_XTAL_16MHZ | SYSCTL_OSC_MAIN | SYSCTL_USE_PLL | SYSCTL_SYSDIV_5);
 
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0);
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0);
 	SysCtlPeripheralReset(SYSCTL_PERIPH_ADC0);
 
 	ADCSequenceDisable(ADC0_BASE, 1);
 	ADCSequenceConfigure(ADC0_BASE, 1, ADC_TRIGGER_PROCESSOR, 0);
 
-	GPIOPinTypeADC(GPIO_PORTE_BASE,
-	GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3);
-	//SysCtlADCSpeedSet(SYSCTL_ADCSPEED_250KSPS);
+	GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_1 | GPIO_PIN_2); // PE1(D3) e PE2(D1)
+	GPIOPinTypeADC(GPIO_PORTD_BASE, GPIO_PIN_3); // PD3(D2)
 
-	ADCSequenceStepConfigure(ADC0_BASE, 1, 0, ADC_CTL_CH0);
-	ADCSequenceStepConfigure(ADC0_BASE, 1, 1, ADC_CTL_CH1);
-	ADCSequenceStepConfigure(ADC0_BASE, 1, 2, ADC_CTL_CH2);
-	ADCSequenceStepConfigure(ADC0_BASE, 1, 3, ADC_CTL_CH3 |
-			ADC_CTL_IE | ADC_CTL_END);
+	ADCSequenceStepConfigure(ADC0_BASE, 1, 0, ADC_CTL_CH1);	// D1
+	ADCSequenceStepConfigure(ADC0_BASE, 1, 1, ADC_CTL_CH4); // D2
+	ADCSequenceStepConfigure(ADC0_BASE, 1, 2, ADC_CTL_CH2 | ADC_CTL_IE | ADC_CTL_END); // D3
+	//ADCSequenceStepConfigure(ADC0_BASE, 1, 3, ADC_CTL_CH3 |	ADC_CTL_IE | ADC_CTL_END);
 
 	IntEnable(INT_ADC0SS1);
 	ADCIntEnable(ADC0_BASE, 1);
@@ -282,17 +292,23 @@ void InitI2C(void)
 	// open-drain operation with weak pull-ups.  Consult the data sheet
 	// to see which functions are allocated per pin.
 	//
-	GPIOPinTypeI2C(GPIO_PORTB_BASE, GPIO_PIN_2 | GPIO_PIN_3);
+	GPIOPinTypeI2CSCL(GPIO_PORTB_BASE, GPIO_PIN_2);
+	GPIOPinTypeI2C(GPIO_PORTB_BASE, GPIO_PIN_3);
 
 
 	// Set GPIO Pins for Open-Drain operation (I have two Rpulls=10K Ohm to 5V on the SCL and SDA lines)
-	GPIOPadConfigSet(GPIO_PORTB_BASE, GPIO_PIN_3, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_OD);
-	GPIOPadConfigSet(GPIO_PORTB_BASE, GPIO_PIN_2, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_OD);
+	//GPIOPadConfigSet(GPIO_PORTB_BASE, GPIO_PIN_3, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_OD);
+	//GPIOPadConfigSet(GPIO_PORTB_BASE, GPIO_PIN_2, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_OD);
 
 	// Give control to the I2C0 Module
 	GPIODirModeSet(GPIO_PORTB_BASE, GPIO_PIN_3, GPIO_DIR_MODE_HW);
 	GPIODirModeSet(GPIO_PORTB_BASE, GPIO_PIN_2, GPIO_DIR_MODE_HW);
 
+	ROM_IntEnable(INT_I2C0);
+	I2CSlaveInit(I2C0_BASE, I2C_SLAVE_ADDR);
+	I2CSlaveIntEnable(I2C0_BASE);
+	I2CSlaveIntEnableEx(I2C0_BASE, I2C_SLAVE_INT_DATA);
+	I2CSlaveEnable(I2C0_BASE);
 }
 
 //*****************************************************************************
@@ -357,8 +373,124 @@ void TimerConfig(uint32_t periodT0, uint32_t periodT1)
 	}
 }
 
-int comuta_mux()
+void GPIOConfig()
 {
+	ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
+	ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
+	ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
+
+	// Habilita PA5(A1) e PA6(A0) como saida
+	ROM_GPIOPinTypeGPIOOutput(GPIO_PORTA_BASE, GPIO_PIN_5 | GPIO_PIN_6);
+	// Habilita PB0(WR), PB1(CS), PB4(A2) e PB5(EN) como saida
+	ROM_GPIOPinTypeGPIOOutput(GPIO_PORTB_BASE, GPIO_PIN_0 | GPIO_PIN_1 |
+			GPIO_PIN_4 | GPIO_PIN_5);
+	// Habilita PE4(A4) e PE5(A3) como saida
+	ROM_GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE, GPIO_PIN_4 | GPIO_PIN_5);
+}
+
+int comuta_mux(int pos)
+{
+	//aciona S1 do mux, dai le D1 (sinal mux1), D2 (sinal mux 2), D3 (sinal mux3)
+
+	switch(pos){
+		case 0:
+			A4_LOW; A3_LOW; A2_LOW; A1_LOW; A0_LOW;
+			break;
+		case 1:
+			A4_LOW; A3_LOW; A2_LOW; A1_LOW; A0_HIGH;
+			break;
+		case 2:
+			A4_LOW; A3_LOW; A2_LOW; A1_HIGH; A0_LOW;
+			break;
+		case 3:
+			A4_LOW; A3_LOW; A2_LOW; A1_HIGH; A0_HIGH;
+			break;
+		case 4:
+			A4_LOW; A3_LOW; A2_HIGH; A1_LOW; A0_LOW;
+			break;
+		case 5:
+			A4_LOW; A3_LOW; A2_HIGH; A1_LOW; A0_HIGH;
+			break;
+		case 6:
+			A4_LOW; A3_LOW; A2_HIGH; A1_HIGH; A0_LOW;
+			break;
+		case 7:
+			A4_LOW; A3_LOW; A2_HIGH; A1_HIGH; A0_HIGH;
+			break;
+		case 8:
+			A4_LOW; A3_HIGH; A2_LOW; A1_LOW; A0_LOW;
+			break;
+		case 9:
+			A4_LOW; A3_HIGH; A2_LOW; A1_LOW; A0_HIGH;
+			break;
+		case 10:
+			A4_LOW; A3_HIGH; A2_LOW; A1_HIGH; A0_LOW;
+			break;
+		case 11:
+			A4_LOW; A3_HIGH; A2_LOW; A1_HIGH; A0_HIGH;
+			break;
+		case 12:
+			A4_LOW; A3_HIGH; A2_HIGH; A1_LOW; A0_LOW;
+			break;
+		case 13:
+			A4_LOW; A3_HIGH; A2_HIGH; A1_LOW; A0_HIGH;
+			break;
+		case 14:
+			A4_LOW; A3_HIGH; A2_HIGH; A1_HIGH; A0_LOW;
+			break;
+		case 15:
+			A4_LOW; A3_HIGH; A2_HIGH; A1_HIGH; A0_HIGH;
+			break;
+		case 16:
+			A4_HIGH; A3_LOW; A2_LOW; A1_LOW; A0_LOW;
+			break;
+		case 17:
+			A4_HIGH; A3_LOW; A2_LOW; A1_LOW; A0_HIGH;
+			break;
+		case 18:
+			A4_HIGH; A3_LOW; A2_LOW; A1_HIGH; A0_LOW;
+			break;
+		case 19:
+			A4_HIGH; A3_LOW; A2_LOW; A1_HIGH; A0_HIGH;
+			break;
+		case 20:
+			A4_HIGH; A3_LOW; A2_HIGH; A1_LOW; A0_LOW;
+			break;
+		case 21:
+			A4_HIGH; A3_LOW; A2_HIGH; A1_LOW; A0_HIGH;
+			break;
+		case 22:
+			A4_HIGH; A3_LOW; A2_HIGH; A1_HIGH; A0_LOW;
+			break;
+		case 23:
+			A4_HIGH; A3_LOW; A2_HIGH; A1_HIGH; A0_HIGH;
+			break;
+		case 24:
+			A4_HIGH; A3_HIGH; A2_LOW; A1_LOW; A0_LOW;
+			break;
+		case 25:
+			A4_HIGH; A3_HIGH; A2_LOW; A1_LOW; A0_HIGH;
+			break;
+		case 26:
+			A4_HIGH; A3_HIGH; A2_LOW; A1_HIGH; A0_LOW;
+			break;
+		case 27:
+			A4_HIGH; A3_HIGH; A2_LOW; A1_HIGH; A0_HIGH;
+			break;
+		case 28:
+			A4_HIGH; A3_HIGH; A2_HIGH; A1_LOW; A0_LOW;
+			break;
+		case 29:
+			A4_HIGH; A3_HIGH; A2_HIGH; A1_LOW; A0_HIGH;
+			break;
+		case 30:
+			A4_HIGH; A3_HIGH; A2_HIGH; A1_HIGH; A0_LOW;
+			break;
+		case 31:
+			A4_HIGH; A3_HIGH; A2_HIGH; A1_HIGH; A0_HIGH;
+			break;
+	}
+
 	return 0;
 }
 
@@ -372,8 +504,8 @@ int
 main(void)
 {
 	//char state;
-	unsigned char mask;
-	uint16_t id;
+	unsigned char mask1, mask2, mask3, mask4;
+	uint16_t id, mux_cont;
     //
     // Set the clocking to run directly from the crystal at 120MHz.
     //
@@ -389,17 +521,9 @@ main(void)
     f_timer = 0;
 
     UARTprintf("Sensores usando TivaC\n");
-    //
-    // Enable the GPIO port that is used for the on-board LEDs.
-    //
-    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);
-    //ROM_GPIODirModeSet(GPIO_PORTN_BASE, GPIO_PIN_2, GPIO_DIR_MODE_OUT);
-    //
-    // Enable the GPIO pins for the LEDs (PN0 & PN1).
-    //
-    ROM_GPIOPinTypeGPIOOutput(GPIO_PORTN_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 
-
+    GPIOConfig();
+    InitI2C();
     TimerConfig(0, g_ui32SysClock/2);	// 10000=200us; 100000=20us
     ADCConfig();
     //
@@ -411,18 +535,30 @@ main(void)
     //read_sensor();
     f_adc = 0;
     id_tx = 0;
+    mux_cont = 0;
     f_totalSens = 1;
-    mask = 0x01;
+    mask1 = 0x01;
+    mask2 = 0x01;
+    mask3 = 0x01;
+    mask4 = 0x01;
 
     //
     // Loop forever while the timers run.
     //
     while(1)
     {
+    	if (id_tx >= ID_FIM)
+		{
+			id_tx = 0;
+			f_totalSens = 1;
+		}
+
     	if (f_adc & f_totalSens)
     	{
     		f_adc = 0;
 
+    		if(mux_cont >= 31)
+    			mux_cont = 0;
     		if (id >= ID_FIM)
     		{
     			f_totalSens = 0;
@@ -430,21 +566,20 @@ main(void)
     			id_tx = 0;
     			continue;
     		}
-
-    		if (mask == 0x80)
+    		if (mask4 == 0x80)
     		{
-    			mask = 0x01;
+    			mask1 = 0x01; mask2 = 0x01; mask3 = 0x01; mask4 = 0x01;
     			id++;
     		}
-    		leituras[id] = (ui32ADC0Value[0] >= NIVEL_1V ? 1: 0) & mask;
-    		mask <<= 1;
-    		leituras[id] = (ui32ADC0Value[1] >= NIVEL_1V ? 1: 0) & mask;
-    		mask <<= 1;
-    		leituras[id] = (ui32ADC0Value[2] >= NIVEL_1V ? 1: 0) & mask;
-    		mask <<= 1;
-    		leituras[id] = (ui32ADC0Value[3] >= NIVEL_1V ? 1: 0) & mask;
-    		mask <<= 1;
-    		comuta_mux();
+    		leituras[id] = (ui32ADC0Value[0] >= NIVEL_1V ? 1: 0) & mask1;
+    		mask1 <<= 1;
+    		leituras[id+3] = (ui32ADC0Value[1] >= NIVEL_1V ? 1: 0) & mask2;
+    		mask2 <<= 1;
+    		leituras[id+6] = (ui32ADC0Value[2] >= NIVEL_1V ? 1: 0) & mask3;
+    		mask3 <<= 1;
+    		leituras[id+9] = (ui32ADC0Value[3] >= NIVEL_1V ? 1: 0) & mask4;
+    		mask4 <<= 1;
+    		comuta_mux(mux_cont++);
     		ADCProcessorTrigger(ADC0_BASE, 1);
     	}
     }
