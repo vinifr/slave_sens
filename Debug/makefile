@@ -8,12 +8,12 @@ CG_TOOL_ROOT := C:/ti/ccsv6/tools/compiler/ti-cgt-arm_5.2.2
 
 ORDERED_OBJS += \
 "./main.obj" \
-"./startup_ccs.obj" \
+"./tm4c123gh6pm_startup_ccs.obj" \
 "./utils/uartstdio.obj" \
-"../timers_ccs.cmd" \
+"../tm4c123gh6pm.cmd" \
 $(GEN_CMDS__FLAG) \
 -l"libc.a" \
--l"C:/ti/TivaWare/examples/boards/ek-tm4c1294xl/timers/ccs/../../../../../driverlib/ccs/Debug/driverlib.lib" \
+-l"C:/ti/TivaWare/examples/boards/ek-tm4c123gxl/timers/ccs/../../../../../driverlib/ccs/Debug/driverlib.lib" \
 
 -include ../makefile.init
 
@@ -125,10 +125,10 @@ EXE_OUTPUTS__QUOTED += \
 "slave_sens.out" \
 
 BIN_OUTPUTS += \
-slave_sens.bin \
+slave_sens.hex \
 
 BIN_OUTPUTS__QUOTED += \
-"slave_sens.bin" \
+"slave_sens.hex" \
 
 
 # All Target
@@ -138,31 +138,26 @@ all: slave_sens.out
 slave_sens.out: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: ARM Linker'
-	"C:/ti/ccsv6/tools/compiler/ti-cgt-arm_5.2.2/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 --abi=eabi -me -O0 -g --gcc --define=ccs="ccs" --define=PART_TM4C1294NCPDT --define=TARGET_IS_TM4C129_RA0 --display_error_number --diag_warning=225 --diag_wrap=off --gen_func_subsections=on --ual -z -m"timers_ccs.map" --heap_size=0 --stack_size=4096 -i"C:/ti/ccsv6/tools/compiler/ti-cgt-arm_5.2.2/lib" -i"C:/ti/ccsv6/tools/compiler/ti-cgt-arm_5.2.2/include" --reread_libs --warn_sections --display_error_number --diag_wrap=off --xml_link_info="slave_sens_linkInfo.xml" --rom_model -o "slave_sens.out" $(ORDERED_OBJS)
+	"C:/ti/ccsv6/tools/compiler/ti-cgt-arm_5.2.2/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 --abi=eabi -me -O0 -g --gcc --define=TARGET_IS_TM4C123_RB1 --define=ccs="ccs" --define=PART_TM4C123GH6PM --display_error_number --diag_warning=225 --diag_wrap=off --gen_func_subsections=on --ual -z -m"timers_ccs.map" --heap_size=0 --stack_size=4096 -i"C:/ti/ccsv6/tools/compiler/ti-cgt-arm_5.2.2/lib" -i"C:/ti/ccsv6/tools/compiler/ti-cgt-arm_5.2.2/include" --reread_libs --warn_sections --display_error_number --diag_wrap=off --xml_link_info="slave_sens_linkInfo.xml" --rom_model -o "slave_sens.out" $(ORDERED_OBJS)
 	@echo 'Finished building target: $@'
 	@echo ' '
-	@$(MAKE) --no-print-directory post-build
 
-slave_sens.bin: $(EXE_OUTPUTS)
+slave_sens.hex: $(EXE_OUTPUTS)
 	@echo 'Invoking: ARM Hex Utility'
-	"C:/ti/ccsv6/tools/compiler/ti-cgt-arm_5.2.2/bin/armhex"  -o "slave_sens.bin" $(EXE_OUTPUTS__QUOTED)
+	"C:/ti/ccsv6/tools/compiler/ti-cgt-arm_5.2.2/bin/armhex"  -o "slave_sens.hex" $(EXE_OUTPUTS__QUOTED)
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
 	-$(RM) $(EXE_OUTPUTS__QUOTED)$(BIN_OUTPUTS__QUOTED)
-	-$(RM) "main.pp" "startup_ccs.pp" "utils\uartstdio.pp" 
-	-$(RM) "main.obj" "startup_ccs.obj" "utils\uartstdio.obj" 
+	-$(RM) "main.pp" "tm4c123gh6pm_startup_ccs.pp" "utils\uartstdio.pp" 
+	-$(RM) "main.obj" "tm4c123gh6pm_startup_ccs.obj" "utils\uartstdio.obj" 
 	-@echo 'Finished clean'
 	-@echo ' '
 
-post-build:
-	-"C:/ti/ccsv6/utils/tiobj2bin/tiobj2bin" "slave_sens.out" "slave_sens.bin" "C:/ti/ccsv6/tools/compiler/ti-cgt-arm_5.2.2/bin/armofd" "C:/ti/ccsv6/tools/compiler/ti-cgt-arm_5.2.2/bin/armhex" "C:/ti/ccsv6/utils/tiobj2bin/mkhex4bin"
-	-@echo ' '
-
 .PHONY: all clean dependents
-.SECONDARY: post-build
+.SECONDARY:
 
 -include ../makefile.targets
 

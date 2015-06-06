@@ -506,13 +506,21 @@ main(void)
 	//char state;
 	unsigned char mask1, mask2, mask3, mask4;
 	uint16_t id, mux_cont;
-    //
-    // Set the clocking to run directly from the crystal at 120MHz.
-    //
-    g_ui32SysClock = MAP_SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
-                                             SYSCTL_OSC_MAIN |
-                                             SYSCTL_USE_PLL |
-                                             SYSCTL_CFG_VCO_480), 120000000);
+
+	//
+	// Enable lazy stacking for interrupt handlers.  This allows floating-point
+	// instructions to be used within interrupt handlers, but at the expense of
+	// extra stack usage.
+	//
+	ROM_FPULazyStackingEnable();
+
+	//
+	// Set the clocking to run directly from the crystal.
+	//
+	ROM_SysCtlClockSet(SYSCTL_SYSDIV_1 | SYSCTL_USE_OSC | SYSCTL_OSC_MAIN |
+					   SYSCTL_XTAL_16MHZ);
+	g_ui32SysClock = ROM_SysCtlClockGet();
+
 
     //
     // Initialize the UART and write status.
@@ -542,6 +550,8 @@ main(void)
     mask3 = 0x01;
     mask4 = 0x01;
 
+    CS_LOW;
+    WR_LOW;
     //
     // Loop forever while the timers run.
     //

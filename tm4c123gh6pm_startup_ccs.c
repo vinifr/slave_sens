@@ -57,6 +57,11 @@ extern uint32_t __STACK_TOP;
 // To be added by user
 
 //*****************************************************************************
+extern void Timer0IntHandler(void);
+extern void Timer1IntHandler(void);
+extern void I2C0IntHandler(void);
+extern void ADCISRHandler(void);
+
 //
 // The vector table.  Note that the proper constructs must be placed on this to
 // ensure that it ends up at physical address 0x0000.0000 or at the start of
@@ -91,7 +96,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // UART0 Rx and Tx
     IntDefaultHandler,                      // UART1 Rx and Tx
     IntDefaultHandler,                      // SSI0 Rx and Tx
-    IntDefaultHandler,                      // I2C0 Master and Slave
+	I2C0IntHandler,                      // I2C0 Master and Slave
     IntDefaultHandler,                      // PWM Fault
     IntDefaultHandler,                      // PWM Generator 0
     IntDefaultHandler,                      // PWM Generator 1
@@ -100,11 +105,11 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // ADC Sequence 0
     IntDefaultHandler,                      // ADC Sequence 1
     IntDefaultHandler,                      // ADC Sequence 2
-    IntDefaultHandler,                      // ADC Sequence 3
+	ADCISRHandler,                      // ADC Sequence 3
     IntDefaultHandler,                      // Watchdog timer
-    IntDefaultHandler,                      // Timer 0 subtimer A
+	Timer0IntHandler,                      // Timer 0 subtimer A
     IntDefaultHandler,                      // Timer 0 subtimer B
-    IntDefaultHandler,                      // Timer 1 subtimer A
+	Timer1IntHandler,                      // Timer 1 subtimer A
     IntDefaultHandler,                      // Timer 1 subtimer B
     IntDefaultHandler,                      // Timer 2 subtimer A
     IntDefaultHandler,                      // Timer 2 subtimer B
